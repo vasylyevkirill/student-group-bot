@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: ${SERVICE}_dev_db
+    restart: always
+    environment:
+      POSTGRES_USER: $DATABASE_USER
+      POSTGRES_PASSWORD: $DATABASE_PASSWORD
+      POSTGRES_DB: $DATABASE_NAME
+    volumes:
+      - university-manager-database:/var/lib/postgresql/data
+    ports:
+      - ${DATABASE_PORT}:${DATABASE_PORT}
+
+  backend:
+    container_name: ${SERVICE}_dev_backend
+    env_file: .env
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    environment:
+      - DEBUG=1
+    volumes:
+      - ./:/app
+    ports:
+      - ${BACKEND_PORT}:${BACKEND_PORT}
+    depends_on:
+      - db
+
+volumes:
+  university-manager-database:
+     external: true
