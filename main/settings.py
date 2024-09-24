@@ -23,6 +23,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CONSTRUCTION_SUPPORT = os.getenv('CONSTRUCTION_SUPPORT_CONTACTS')
 CUSTOMER_SUPPORT = os.getenv('CUSTOMER_SUPPORT_CONTACTS')
 
+TIME_ZONE = "Europe/Moscow"
+USE_TZ = False
+
 INSTALLED_APPS = ("main",)
 
 BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
