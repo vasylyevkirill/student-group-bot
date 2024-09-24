@@ -1,5 +1,7 @@
-from asgiref.sync import sync_to_async
 import datetime
+from asgiref.sync import sync_to_async
+
+from django.db.models.functions import Now
 from django.db import models
 
 
@@ -53,7 +55,7 @@ class BotUser(models.Model):
 
 
 class StudentGroup(models.Model):
-    name = models.CharField('Name', max_length=255)
+    name = models.CharField('Name', max_length=255, unique=True)
     admin = models.ForeignKey(
         BotUser,
         on_delete=models.SET_NULL,
@@ -73,9 +75,11 @@ class Subject(models.Model):
     )
 
     mark = models.TextField('Mark', blank=False, null=False, default='')
+    date_start = models.DateField(db_default=Now())
+    date_end = models.DateField(db_default=Now() + datetime.timedelta(days=120))
 
     class Meta:
-        unique_together = (('name', 'group'),)
+        unique_together = (('name', 'group', 'date_start', 'date_end'),)
 
 
 class SubjectScheduleItem(models.Model):
@@ -88,12 +92,18 @@ class SubjectScheduleItem(models.Model):
     start_at = models.DateTimeField(default=get_default_start_time)
 
     class Meta:
-        ordering = ('-start_at',)
+        ordering = ('start_at',)
 
 
 class SubjectScheduleItemMark(models.Model):
     title = models.CharField('Title', max_length=511)
     text = models.TextField('Text', blank=False, null=False, default='')
+    subject_item = models.ForeignKey(
+        SubjectScheduleItem,
+        on_delete=models.CASCADE,
+        blank=False,
+        related_name='marks',
+    )
 
 
 class SubjectScheduleItemQueue(models.Model):
@@ -102,7 +112,7 @@ class SubjectScheduleItemQueue(models.Model):
         on_delete=models.CASCADE,
         blank=False,
     )
-    subject = models.ForeignKey(
+    subject_item = models.ForeignKey(
         SubjectScheduleItem,
         on_delete=models.CASCADE,
         blank=False,
