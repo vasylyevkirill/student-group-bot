@@ -1,3 +1,4 @@
+from asgiref.sync import sync_to_async
 import datetime
 from django.db import models
 
@@ -8,6 +9,7 @@ def get_default_start_time() -> datetime.datetime:
 
 class BotUser(models.Model):
     class BotUserRoles(models.TextChoices):
+        SUPER_USER = 'superuser', 'Super user'
         TEACHER = 'teacher', 'Teacher'
         EDITOR = 'editor', 'Editor'
         STUDENT = 'student', 'Student'
@@ -27,8 +29,7 @@ class BotUser(models.Model):
         max_length=50,
         choices=BotUserRoles.choices,
         default=BotUserRoles.STUDENT,
-    ) 
-    is_superuser = models.BooleanField('Is superuser', default=False)
+    )
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -37,6 +38,18 @@ class BotUser(models.Model):
                 return
             self.group.admin = self
             self.group.save()
+
+    @property
+    def is_admin(self) -> bool:
+        return self.group.admin == self
+
+    @property
+    @sync_to_async
+    def ais_admin(self) -> bool:
+        return self.is_admin
+
+    class Meta:
+        ordering = 'group full_name'.split()
 
 
 class StudentGroup(models.Model):
@@ -60,6 +73,7 @@ class Subject(models.Model):
     )
 
     mark = models.TextField('Mark', blank=False, null=False, default='')
+
     class Meta:
         unique_together = (('name', 'group'),)
 
@@ -72,6 +86,7 @@ class SubjectScheduleItem(models.Model):
         related_name='schedule',
     )
     start_at = models.DateTimeField(default=get_default_start_time)
+
     class Meta:
         ordering = ('-start_at',)
 

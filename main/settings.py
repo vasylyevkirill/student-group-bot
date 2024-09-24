@@ -17,7 +17,11 @@ DATABASES = {
     }
 }
 
+LOGGING_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CONSTRUCTION_SUPPORT = os.getenv('CONSTRUCTION_SUPPORT_CONTACTS')
+CUSTOMER_SUPPORT = os.getenv('CUSTOMER_SUPPORT_CONTACTS')
 
 INSTALLED_APPS = ("main",)
 
