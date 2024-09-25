@@ -6,7 +6,7 @@ from aiogram.types import Message
 from django.conf import settings
 
 from main.models import BotUser
-from main.filters import IsRegisteredFilter, IsEditorFilter
+from main.filters import IsRegisteredFilter, IsEditorFilter, DateFilter
 from main.keyboards import get_default_user_keyboard, get_editor_keyboard, get_admin_keyboard, get_superadmin_keyboard
 from main.services.bot_user import get_user, get_student_group, create_user
 from main.services.group_actions import get_today_schedule, aget_week_separated_schedule
@@ -84,7 +84,12 @@ async def week_schedule_handler(message: Message) -> None:
 
 @router.message(F.text == 'Добавить ДЗ', IsEditorFilter())
 async def add_subject_item_mark_handler(message: Message) -> None:
-    await message.answer('Напишите дату в формате 2024-09-29:')
+    await message.answer('Напишите дату в формате 29-09-2024:')
+
+
+@router.message(DateFilter())
+async def date_handler(message: Message) -> None:
+    return message.answer('Поздравляю, вы правильно ввели дату:')
 
 
 @router.message(F.text == 'Добавить предмет', IsEditorFilter())
