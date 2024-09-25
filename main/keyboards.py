@@ -18,6 +18,10 @@ def _get_markup(
     )
 
 
+def get_keyboard_from_range(number_list: Iterable[int]) -> ReplyKeyboardMarkup:
+    return _get_markup([str(n) for n in number_list])
+
+
 def get_default_user_keyboard() -> ReplyKeyboardMarkup:
     commands_list = 'Моя группа#Список группы#Расписание#Расписание на сегодня'.split('#')
 
@@ -33,7 +37,7 @@ def get_editor_keyboard() -> ReplyKeyboardMarkup:
 
 
 def get_admin_keyboard() -> ReplyKeyboardMarkup:
-    builder = ReplyKeyboardBuilder().from_markup(get_editor_keyboard()())
+    builder = ReplyKeyboardBuilder().from_markup(get_editor_keyboard())
 
     commands_list = 'Управление группой'.split('#')
 

@@ -43,8 +43,16 @@ class IsSuperUserFilter(Filter):
         return user.role == BotUser.BotUserRoles.SUPER_USER
 
 
-class DateFilter(Filter):
-    DATE_MASK = re.compile(
+class _RegexFilter(Filter):
+    def __init__(self):
+        assert self.REGEX_MASK
+
+    async def __call__(self, message: Message) -> bool:
+        return bool(self.REGEX_MASK.match(message.text))
+
+
+class DateFilter(_RegexFilter):
+    REGEX_MASK = re.compile(
         r'^(?:(?:31(\/|-|\.)(?:0?[13578]|1[02]))\1|(?:(?:29|30)(\/|-|\.)'
         r'(?:0?[13-9]|1[0-2])\2))(?:(?:1[6-9]|[2-9]\d)?\d{2})$|^(?:29(\/|-|\.)'
         r'0?2\3(?:(?:(?:1[6-9]|[2-9]\d)?(?:0[48]|[2468][048]|[13579][26])|(?:'
@@ -52,5 +60,6 @@ class DateFilter(Filter):
         r'(?:(?:0?[1-9])|(?:1[0-2]))\4(?:(?:1[6-9]|[2-9]\d)?\d{2})$'
     )
 
-    async def __call__(self, message: Message) -> bool:
-        return bool(self.DATE_MASK.match(message.text))
+
+class NumberFilter(_RegexFilter):
+    REGEX_MASK = re.compile(r'^[0-9]+$')

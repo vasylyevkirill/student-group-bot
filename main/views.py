@@ -1,3 +1,4 @@
+import asyncstdlib
 from datetime import datetime
 from aiogram import html, Router, F
 from aiogram.filters import CommandStart
@@ -6,10 +7,21 @@ from aiogram.types import Message
 from django.conf import settings
 
 from main.models import BotUser
-from main.filters import IsRegisteredFilter, IsEditorFilter, DateFilter
-from main.keyboards import get_default_user_keyboard, get_editor_keyboard, get_admin_keyboard, get_superadmin_keyboard
+from main.filters import IsRegisteredFilter, IsEditorFilter, DateFilter, NumberFilter
 from main.services.bot_user import get_user, get_student_group, create_user
-from main.services.group_actions import get_today_schedule, aget_week_separated_schedule
+from main.keyboards import (
+    get_default_user_keyboard,
+    get_editor_keyboard, get_admin_keyboard,
+    get_superadmin_keyboard,
+    get_keyboard_from_range
+)
+from main.services.group_actions import (
+    get_today_schedule,
+    aget_week_separated_schedule,
+    aget_group_subjects_list,
+    aget_group_subject_by_index,
+    get_subject_closest_schedule
+)
 
 
 router = Router()
@@ -17,6 +29,10 @@ router = Router()
 
 def time_to_str(date: datetime) -> str:
     return date.strftime('%H:%M')
+
+
+def date_to_str(date: datetime) -> str:
+    return date.strftime('%d.%m.%y')
 
 
 async def superadmin_user_handler(message: Message, user: BotUser) -> None:
@@ -84,16 +100,42 @@ async def week_schedule_handler(message: Message) -> None:
 
 @router.message(F.text == 'Добавить ДЗ', IsEditorFilter())
 async def add_subject_item_mark_handler(message: Message) -> None:
-    await message.answer('Напишите дату в формате 29-09-2024:')
+    group = await get_student_group(user=message.from_user)
+    subjects, count = await aget_group_subjects_list(group)
+
+    subjects_list = [f'{i + 1}. {s.name}' async for i, s in asyncstdlib.enumerate(subjects)]
+    markup = get_keyboard_from_range(range(1, count + 1))
+
+    await message.answer('Выберите предмет:\n\n' + '\n'.join(subjects_list), reply_markup=markup)
+
+
+@router.message(NumberFilter(), IsEditorFilter())
+async def number_handler(message: Message) -> None:
+    index = int(message.text)
+    group = await get_student_group(user=message.from_user)
+    subject = await aget_group_subject_by_index(index, group)
+
+    if not subject:
+        await message.answer('Номер дисциплины вне списка:')
+        return await add_subject_item_mark_handler(message)
+
+    schedule = get_subject_closest_schedule(subject)
+    subjects_list = [f'{date_to_str(i.start_at)} {time_to_str(i.start_at)}' async for i in schedule]
+
+    return await message.answer(f'{index}. {subject.name}' + '\n'.join(subjects_list))
 
 
 @router.message(DateFilter())
 async def date_handler(message: Message) -> None:
-    return message.answer('Поздравляю, вы правильно ввели дату:')
+    return await message.answer('Поздравляю, вы правильно ввели дату:')
+
+
+@router.message(F.text == 'Добавить очередь', IsEditorFilter())
+async def add_queue_handler(message: Message) -> None:
+    return await message.answer('Напишите дату в формате 29-09-2024:')
 
 
 @router.message(F.text == 'Добавить предмет', IsEditorFilter())
-@router.message(F.text == 'Добавить очередь', IsEditorFilter())
 async def under_construction(message: Message) -> None:
     await message.answer(
         'Эта команда ещё в разработке.\n\n'

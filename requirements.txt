@@ -20,6 +20,8 @@ apscheduler==3.10.4
     # via -r requirements.in
 asgiref==3.8.1
     # via django
+asyncstdlib==3.12.5
+    # via -r requirements.in
 attrs==24.2.0
     # via aiohttp
 certifi==2024.8.30
