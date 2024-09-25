@@ -26,7 +26,7 @@ def get_editor_keyboard() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
 
     builder.from_markup(get_default_user_keyboard())
-    commands_list = 'Добавить предмет#Добавить дз#Добавить очередь'.split('#')
+    commands_list = 'Добавить предмет#Добавить ДЗ#Добавить очередь'.split('#')
 
     return _get_markup(commands_list, builder=builder)
 

@@ -5,7 +5,7 @@ from main.services.group_management import WEEK_DAYS_LIST, create_subject
 from main.models import StudentGroup
 
 
-def parse_mospolytech_subjects(group: StudentGroup, token: str, ):
+def parse_mospolytech_group_schedule(group: StudentGroup, token: str, ):
     url = f'https://e.mospolytech.ru/old/lk_api.php/?getSchedule=&group={group.name}&token={token}'
     response = requests.get(url)
     subjects = json.loads(response.content)

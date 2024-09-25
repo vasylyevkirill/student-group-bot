@@ -5,7 +5,7 @@ from aiogram.types import Message
 from django.conf import settings
 
 from main.models import BotUser
-from main.filters import IsRegisteredFilter
+from main.filters import IsRegisteredFilter, IsEditorFilter
 from main.keyboards import get_default_user_keyboard, get_editor_keyboard, get_admin_keyboard, get_superadmin_keyboard
 from main.services.bot_user import get_user, get_student_group, create_user
 
@@ -54,15 +54,20 @@ async def my_group_list_handler(message: Message) -> None:
     await message.answer(f'Список группы {group.name}:\n\n' + '\n'.join(students_list))
 
 
+@router.message(F.text == 'Добавить предмет', IsEditorFilter())
+@router.message(F.text == 'Добавить ДЗ', IsEditorFilter())
+@router.message(F.text == 'Добавить очередь', IsEditorFilter())
 @router.message(F.text == 'Расписание', IsRegisteredFilter())
 @router.message(F.text == 'Расписание на сегодня', IsRegisteredFilter())
 async def under_construction(message: Message) -> None:
-    await message.answer(f'Эта команда ещё не готова.\n\nЕсли срочно нужно разработать, пишите {settings.CUSTOMER_SUPPORT}.')
+    await message.answer(f'Эта команда ещё не готова.\n\n\' \
+        Если срочно нужно разработать, пишите {settings.CUSTOMER_SUPPORT}.')
 
 
 @router.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.answer(f'''Привет, {html.bold(message.from_user.full_name)}!\n\nЯ бот, который тебе поможет в обучении. Для начала напиши группу в которой ты учишься:''')
+    await message.answer(f'''Привет, {html.bold(message.from_user.full_name)}!\n\n'\
+            'Я бот, который тебе поможет в обучении. Для начала напиши группу в которой ты учишься:''')
 
 
 @router.message()
@@ -71,7 +76,10 @@ async def message_handler(message: Message) -> None:
     if not user:
         group = await get_student_group(message.text)
         if not group:
-            return await message.answer(f'К сожалению такой группы ещё нет. Если вы хотите добавить этого бота в свою группу, пишите: {settings.CUSTOMER_SUPPORT}.')
+            return await message.answer(
+                'К сожалению такой группы ещё нет.\n\n'
+                f'Если вы хотите добавить этого бота в свою группу, пишите: {settings.CUSTOMER_SUPPORT}.'
+            )
         user = await create_user(message.from_user, group)
         await message.answer('Поздравляю! Вы успешно прошли регистрацию!')
     else:
