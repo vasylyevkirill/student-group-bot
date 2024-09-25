@@ -1,6 +1,8 @@
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, ReplyKeyboardMarkup
 from collections.abc import Iterable
 
+from main.services.group_actions import WEEK_DAYS_LIST
+
 
 def _get_markup(
     commands_list: Iterable[str], adjust: Iterable[int] = (2,),
@@ -23,17 +25,24 @@ def get_default_user_keyboard() -> ReplyKeyboardMarkup:
 
 
 def get_editor_keyboard() -> ReplyKeyboardMarkup:
-    builder = ReplyKeyboardBuilder()
+    builder = ReplyKeyboardBuilder().from_markup(get_default_user_keyboard())
 
-    builder.from_markup(get_default_user_keyboard())
     commands_list = 'Добавить предмет#Добавить ДЗ#Добавить очередь'.split('#')
 
     return _get_markup(commands_list, builder=builder)
 
 
 def get_admin_keyboard() -> ReplyKeyboardMarkup:
-    return get_editor_keyboard()
+    builder = ReplyKeyboardBuilder().from_markup(get_editor_keyboard()())
+
+    commands_list = 'Управление группой'.split('#')
+
+    return _get_markup(commands_list, builder=builder)
 
 
 def get_superadmin_keyboard() -> ReplyKeyboardMarkup:
     return get_admin_keyboard()
+
+
+def get_week_days_keyboard() -> ReplyKeyboardMarkup:
+    return _get_markup(WEEK_DAYS_LIST)
