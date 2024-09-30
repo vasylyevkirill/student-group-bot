@@ -96,7 +96,7 @@ class SubjectScheduleItem(models.Model):
 
 
 class SubjectScheduleItemMark(models.Model):
-    title = models.CharField('Title', max_length=511)
+    title = models.CharField('Title', max_length=511, default='')
     text = models.TextField('Text', blank=False, null=False, default='')
     creator = models.ForeignKey(
         BotUser,
@@ -111,10 +111,8 @@ class SubjectScheduleItemMark(models.Model):
         related_name='marks',
     )
 
-    is_editing = models.BooleanField('Is editing', default=False)
-
     class Meta:
-        ordering = 'is_editing subject_item'.split()
+        ordering = 'creator subject_item'.split()
 
 
 class SubjectScheduleItemQueue(models.Model):

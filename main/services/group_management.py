@@ -1,5 +1,6 @@
 import datetime
 
+from django.db.models import Q
 from main.models import (
     Subject, BotUser, StudentGroup, SubjectScheduleItem,
     SubjectScheduleItemMark, SubjectScheduleItemQueue
@@ -83,11 +84,11 @@ def create_subject(
     return subject
 
 
-def create_subject_item_mark(mark: str, subject_item: SubjectScheduleItem) -> SubjectScheduleItemMark:
-    return SubjectScheduleItemMark.objects.acreate(
-        mark=mark,
-        subject_item=subject_item
-    )
+def get_user_editable_schedule_item_mark(user: BotUser) -> SubjectScheduleItemMark | None:
+    editing_marks = SubjectScheduleItemMark.objects.filter(Q(title='') | Q(text=''), creator=user)
+    if not editing_marks.count():
+        return None
+    return editing_marks.first()
 
 
 def create_subject_item_queue(student: BotUser, subject_item: SubjectScheduleItem) -> SubjectScheduleItemQueue:

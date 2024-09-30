@@ -1,4 +1,9 @@
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, ReplyKeyboardMarkup
+from aiogram.utils.keyboard import (
+    ReplyKeyboardBuilder,
+    ReplyKeyboardMarkup,
+    InlineKeyboardBuilder,
+    InlineKeyboardMarkup
+)
 from collections.abc import Iterable
 
 from main.services.group_actions import WEEK_DAYS_LIST
@@ -6,8 +11,8 @@ from main.services.group_actions import WEEK_DAYS_LIST
 
 def _get_markup(
     commands_list: Iterable[str], adjust: Iterable[int] = (2,),
-    builder: ReplyKeyboardBuilder = ReplyKeyboardBuilder()
-) -> ReplyKeyboardMarkup:
+    builder: ReplyKeyboardBuilder | InlineKeyboardBuilder = ReplyKeyboardBuilder()
+) -> ReplyKeyboardMarkup | InlineKeyboardMarkup:
     [builder.button(text=c) for c in commands_list]
     builder.adjust(*adjust)
 
@@ -50,3 +55,16 @@ def get_superadmin_keyboard() -> ReplyKeyboardMarkup:
 
 def get_week_days_keyboard() -> ReplyKeyboardMarkup:
     return _get_markup(WEEK_DAYS_LIST)
+
+#
+# INLINE KEYBOARDS
+#
+
+
+def get_inline_keyboard_from_dict(commands_dict: dict[str, str]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    [builder.button(text=k, callback_data=commands_dict[k]) for k in commands_dict]
+    builder.adjust()
+
+    return builder.as_markup()
