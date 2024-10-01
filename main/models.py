@@ -130,5 +130,12 @@ class SubjectScheduleItemQueue(models.Model):
     order = models.PositiveIntegerField('Order', default=0)
     date_created = models.DateTimeField(default=datetime.datetime.now)
 
+    def save(self, *args, **kwargs):
+        order = SubjectScheduleItemQueue.objects.filter(subject_item=self.subject_item).count()
+        if order:
+            self.order = order
+        super().save(*args, **kwargs)
+
     class Meta:
+        unique_together = (('student', 'subject_item'),)
         ordering = 'order date_created'.split()
