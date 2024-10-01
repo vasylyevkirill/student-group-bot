@@ -3,7 +3,6 @@ import itertools
 from asgiref.sync import sync_to_async
 from django.db.models.query import QuerySet
 
-
 from main.models import StudentGroup, SubjectScheduleItem, Subject
 
 
@@ -26,25 +25,27 @@ def get_group_subject_by_index(index: int, group: StudentGroup) -> Subject | Non
 
 def get_subject_closest_schedule(subject: Subject) -> QuerySet:
     now = datetime.datetime.now()
-    return subject.schedule.filter(start_at__lte=now)[:5]
+    return subject.schedule.filter(start_at__gte=now)[:5]
 
 
-def get_today_schedule(group: StudentGroup) -> QuerySet:
-    now = datetime.datetime.now()
-    today_start = datetime.datetime(now.year, now.month, now.day)
-    today_end = today_start.replace(day=now.day + 1)
+def get_day_schedule(group: StudentGroup, date: datetime.datetime | None = None) -> QuerySet:
+    if not date:
+        date = datetime.datetime.now()
+
+    date_start = datetime.datetime(date.year, date.month, date.day)
+    date_end = date_start + datetime.timedelta(days=1)
 
     return SubjectScheduleItem.objects.select_related('subject').filter(
         subject__group=group,
-        start_at__gte=today_start,
-        start_at__lte=today_end,
+        start_at__gte=date_start,
+        start_at__lte=date_end,
     )
 
 
 def get_week_separated_schedule(group: StudentGroup) -> dict:
     now = datetime.datetime.now()
-    week_start = datetime.datetime(now.year, now.month, now.day - now.weekday())
-    week_end = week_start.replace(day=week_start.day + 6)
+    week_start = datetime.datetime(now.year, now.month, now.day) - datetime.timedelta(days=now.weekday())
+    week_end = week_start + datetime.timedelta(days=6)
 
     week_schedule = SubjectScheduleItem.objects.select_related('subject').filter(
         subject__group=group,
