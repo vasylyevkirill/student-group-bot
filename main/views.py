@@ -32,16 +32,10 @@ from main.services.group_actions import (
     aget_group_subject_by_index,
     get_subject_closest_schedule,
 )
+from main.helpers import time_to_str, date_to_str
+
 
 router = Router()
-
-
-def time_to_str(date: datetime) -> str:
-    return date.strftime('%H:%M')
-
-
-def date_to_str(date: datetime) -> str:
-    return date.strftime('%d.%m.%y')
 
 
 async def unregistered_user_handler(message: Message, user: BotUser | None = None) -> None:
