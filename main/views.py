@@ -109,12 +109,13 @@ async def week_schedule_handler(message: Message) -> None:
 
     schedule = await aget_week_separated_schedule(group)
     for day in schedule:
+        if not schedule[day]:
+            continue
+
+        day_schedule_items = [f'{time_to_str(i.start_at)} {i.subject.name}' for i in schedule[day]]
         await message.answer(
-            f'Расписание на {day} для {group.name}:'
-            '\n'.join([f'{time_to_str(i.start_at)} {i.subject.name}' for i in schedule[day]])
+            f'Расписание на {day} для {group.name}:\n' + '\n'.join(day_schedule_items)
         )
-    # TODO: make it in one message
-    # await message.answer(f'Расписание на текущую неделю для {group.name}:\n\n' + schedule_text)
 
 
 @router.message(F.text == 'Добавить ДЗ', IsEditorFilter())
@@ -187,7 +188,6 @@ async def edit_schedule_item_mark_title(message: Message) -> None:
         return await reply_default_user_message(message, user)
 
 
-
 @router.message(IsScheduleItemMarkEditingText())
 async def edit_schedule_item_mark_text(message: Message) -> None:
     user = await get_user(message.from_user)
@@ -228,8 +228,9 @@ async def show_subject_item_queue(message: Message, schedule_item: SubjectSchedu
     ]
 
     return await message.answer(
-        f'{schedule_item.subject.name} {date_to_str(schedule_item.start_at)} {time_to_str(schedule_item.start_at)}\n\n'
-        ' '.join(queue_list)
+        f'{schedule_item.subject.name} '
+        f'{date_to_str(schedule_item.start_at)} '
+        f'{time_to_str(schedule_item.start_at)}\n\n' + ' '.join(queue_list)
     )
 
 

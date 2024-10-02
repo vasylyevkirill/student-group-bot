@@ -53,10 +53,11 @@ def get_week_separated_schedule(group: StudentGroup) -> dict:
         start_at__lte=week_end,
     )
 
-    splited_schedule = dict.fromkeys(WEEK_DAYS_LIST, [])
+    splited_schedule = {d: [] for d in WEEK_DAYS_LIST}
 
     for schedule_item in week_schedule:
         week_day_number = schedule_item.start_at.weekday()
+
         splited_schedule[WEEK_DAYS_LIST[week_day_number]].append(schedule_item)
 
     return splited_schedule
