@@ -11,14 +11,17 @@ from main.services.group_actions import WEEK_DAYS_LIST
 
 def _get_markup(
     commands_list: Iterable[str], adjust: Iterable[int] = (2,),
-    builder: ReplyKeyboardBuilder | InlineKeyboardBuilder = ReplyKeyboardBuilder()
+    builder: ReplyKeyboardBuilder | InlineKeyboardBuilder | None = None,
 ) -> ReplyKeyboardMarkup | InlineKeyboardMarkup:
+    if not builder:
+        builder = ReplyKeyboardBuilder()
+
     [builder.button(text=c) for c in commands_list]
     builder.adjust(*adjust)
 
     return builder.as_markup(
         resize_keyboard=True,
-        one_time_keyboard=True,
+        remove_keyboard=True,
         input_field_placeholder="Выберите команду:"
     )
 
@@ -36,7 +39,7 @@ def get_default_user_keyboard() -> ReplyKeyboardMarkup:
 def get_editor_keyboard() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder().from_markup(get_default_user_keyboard())
 
-    commands_list = 'Добавить предмет#Добавить ДЗ#Добавить очередь'.split('#')
+    commands_list = 'Добавить предмет#Добавить ДЗ#Создать очередь'.split('#')
 
     return _get_markup(commands_list, builder=builder)
 
