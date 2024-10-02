@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 MONTHS_LIST = 'Январь Февраль Март Апрель Май Июнь Июль Август Сентябрь Октябрь Ноябрь Декабрь'.split()
@@ -24,6 +24,25 @@ def get_text_month_number(month: str) -> str:
     return f'0{month_number}'
 
 
+def _get_datetime_start_end(
+    date: datetime,
+    delta_to_start: timedelta,
+    delta_to_end: timedelta
+) -> tuple[datetime, datetime]:
+    date_start = datetime(date.year, date.month, date.day) - delta_to_start
+    date_end = datetime(date.year, date.month, date.day) + delta_to_end
+
+    return date_start, date_end
+
+
+def get_day_start_end(date: datetime) -> tuple[datetime, datetime]:
+    return _get_datetime_start_end(date, timedelta(), timedelta(days=1))
+
+
+def get_week_start_end(date: datetime) -> tuple[datetime, datetime]:
+    return _get_datetime_start_end(date, timedelta(days=date.weekday()), timedelta(days=7))
+
+
 def _parse_interval(inteval: str) -> list[str]:
     try:
         return inteval.split(' - ')
@@ -32,7 +51,7 @@ def _parse_interval(inteval: str) -> list[str]:
         raise ValueError(f'parse_date_interval: get unexpected argument {inteval}')
 
 
-def parse_time_interval(time_interval: str) -> tuple[datetime, datetime.datetime]:
+def parse_time_interval(time_interval: str) -> tuple[datetime, datetime]:
     (time_start, time_end) = _parse_interval(time_interval)
 
     time_start, time_end = (datetime.strptime(d, '%H:%M') for d in (time_start, time_end))
@@ -40,7 +59,7 @@ def parse_time_interval(time_interval: str) -> tuple[datetime, datetime.datetime
     return time_start, time_end
 
 
-def parse_date_interval(date_interval: str) -> tuple[datetime, datetime.datetime]:
+def parse_date_interval(date_interval: str) -> tuple[datetime, datetime]:
     current_year = datetime.now().year
     (date_start, date_end) = _parse_interval(date_interval)
 
