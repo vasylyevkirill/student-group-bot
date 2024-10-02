@@ -68,6 +68,6 @@ def get_inline_keyboard_from_dict(commands_dict: dict[str, str]) -> InlineKeyboa
     builder = InlineKeyboardBuilder()
 
     [builder.button(text=k, callback_data=commands_dict[k]) for k in commands_dict]
-    builder.adjust()
+    builder.adjust(1)
 
     return builder.as_markup()

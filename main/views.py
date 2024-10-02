@@ -168,7 +168,7 @@ async def add_homework_callback_handler(callback: CallbackQuery):
         creator=user,
     )
 
-    return await callback.message.answer('Теперь напишите заголовок(например дз):')
+    return await callback.message.answer('Теперь напишите заголовок(например дз):', reply_markup=ReplyKeyboardRemove())
 
 
 @router.message(IsScheduleItemMarkEditingTitle())
@@ -183,6 +183,9 @@ async def edit_schedule_item_mark_title(message: Message) -> None:
 
     if editing_mark.text == '':
         return await message.answer('Теперь напишите текст:', reply_markup=ReplyKeyboardRemove())
+    else:
+        return await reply_default_user_message(message, user)
+
 
 
 @router.message(IsScheduleItemMarkEditingText())
@@ -193,7 +196,8 @@ async def edit_schedule_item_mark_text(message: Message) -> None:
     editing_mark.text = message.text
     await editing_mark.asave(force_update=True)
 
-    return await message.answer('Текст успешно обновлен!', reply_markup=ReplyKeyboardRemove())
+    await message.answer('Текст успешно обновлен!', reply_markup=ReplyKeyboardRemove())
+    return await reply_default_user_message(message, user)
 
 
 @router.message(DateFilter(), IsEditorFilter())
