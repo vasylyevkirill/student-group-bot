@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import itertools
+from collections.abc import Iterable
 from asgiref.sync import sync_to_async
 from django.db.models.query import QuerySet
 
-from main.models import StudentGroup, SubjectScheduleItem, Subject, SubjectScheduleItemMark
+from main.models import StudentGroup, SubjectScheduleItem, Subject, SubjectScheduleItemMark, SubjectScheduleItemQueue
 from main.helpers import get_day_start_end, get_week_start_end
 
 
@@ -42,10 +43,12 @@ def get_day_schedule(group: StudentGroup, date: datetime | None = None) -> Query
     )
 
 
-def get_week_separated_schedule(group: StudentGroup) -> dict:
-    now = datetime.now()
-
-    week_start, week_end = get_week_start_end(now)
+def get_week_separated_schedule(
+    group: StudentGroup, week_day: datetime | None = None
+) -> dict[str, list[SubjectScheduleItem]]:
+    if not week_day:
+        week_day = datetime.now()
+    week_start, week_end = get_week_start_end(week_day)
 
     week_schedule = SubjectScheduleItem.objects.select_related('subject').filter(
         subject__group=group,
@@ -63,39 +66,27 @@ def get_week_separated_schedule(group: StudentGroup) -> dict:
     return splited_schedule
 
 
-def get_marks_schedule_for_date(
-    group: StudentGroup, date: datetime | None = None
+def get_marks_schedule(
+    group: StudentGroup | None = None, date: datetime | None = None, date_schedule: Iterable | None = None
 ) -> dict[SubjectScheduleItem, list[SubjectScheduleItemMark]] | None:
-    if not date:
-        date = datetime.now()
+    if not date_schedule and not date and not group:
+        raise ValueError(__name__ + ': requires at least one arguments.')
 
-    date_schedule = tuple(get_day_schedule(group, date))
-    marks_schedule = {key: list(key.marks.all()) for key in date_schedule if len(list(key.marks.all()))}
+    if not date_schedule:
+        date_schedule = tuple(get_day_schedule(group, date))
+
+    marks_schedule = {key: list(key.marks.all()) for key in date_schedule if key.marks.count()}
 
     return marks_schedule
 
 
-def get_marks_week_separated_schedule(group: StudentGroup) -> dict:
-    now = datetime.now()
-    week_start = datetime(now.year, now.month, now.day) - timedelta(days=now.weekday())
-    week_end = week_start + timedelta(days=6)
-
-    week_schedule = SubjectScheduleItem.objects.select_related('subject').filter(
-        subject__group=group,
-        start_at__gte=week_start,
-        start_at__lte=week_end,
-    )
-
-    splited_schedule = {d: [] for d in WEEK_DAYS_LIST}
-
-    for schedule_item in week_schedule:
-        week_day_number = schedule_item.start_at.weekday()
-
-        splited_schedule[WEEK_DAYS_LIST[week_day_number]].append(schedule_item)
-
-    return splited_schedule
+def get_queue_schedule(
+    group: StudentGroup, date: datetime | None = None
+) -> dict[SubjectScheduleItem, list[SubjectScheduleItemQueue]] | None:
+    pass
 
 
-aget_week_separated_schedule = sync_to_async(get_week_separated_schedule)
+aget_marks_schedule = sync_to_async(get_marks_schedule)
 aget_group_subjects_list = sync_to_async(get_group_subjects_list)
 aget_group_subject_by_index = sync_to_async(get_group_subject_by_index)
+aget_week_separated_schedule = sync_to_async(get_week_separated_schedule)
