@@ -8,7 +8,7 @@ from main.models import BotUser, StudentGroup
 async def is_user_registered(user: User | None = None, user_query: QuerySet | None = None) -> bool:
     if user_query is None:
         if not user:
-            raise ValueError('is_user_registered error: requires at least one argument but 0 given.')
+            raise ValueError(__name__ + ': requires at least one argument but 0 given.')
         user_query = BotUser.objects.filter(
             full_name=user.full_name,
             username=user.username,
@@ -24,7 +24,7 @@ async def get_user(user: User | None = None, user_id: int | None = None) -> BotU
     elif user_id:
         queryset = queryset.filter(id=user_id)
     else:
-        raise ValueError('get_user error: requires at least one argument but 0 given.')
+        raise ValueError(__name__ + ': requires at least one argument but 0 given.')
     user_registered = await is_user_registered(user_query=queryset)
     if not user_registered:
         return None
@@ -68,4 +68,4 @@ async def get_student_group(name: str | None = None, user: User | None = None) -
     if user:
         return await _get_student_group_by_user(user, queryset)
 
-    raise ValueError('get_student_group error: requires at least one argument but 0 given.')
+    raise ValueError(__name__ + ': requires at least one argument but 0 given.')
