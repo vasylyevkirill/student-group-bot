@@ -150,14 +150,27 @@ class SubjectScheduleItemQueue(models.Model):
     date_created = models.DateTimeField(default=datetime.datetime.now)
 
     def __str__(self):
-        return f'{self.order}. {self.student}: {self.subject_item}'
+        return f'{self.order + 1}. {self.student}'
 
-    def save(self, *args, **kwargs):
-        order = SubjectScheduleItemQueue.objects.filter(subject_item=self.subject_item).count()
-        if order:
-            self.order = order
+    def save(self, *args, force_insert=False, **kwargs):
+        if force_insert:
+            default_order = SubjectScheduleItemQueue.objects.filter(subject_item=self.subject_item).count()
+            self.order = default_order
         super().save(*args, **kwargs)
 
     class Meta:
         unique_together = (('student', 'subject_item'),)
         ordering = 'order date_created'.split()
+
+
+def on_delete_queue(instance, **kwargs):
+    for queue_record in SubjectScheduleItemQueue.objects.filter(subject_item = instance.subject_item, order__gt = instance.order):
+        queue_record.order -= 1
+        queue_record.save(force_update=True)
+    
+
+models.signals.post_delete.connect(
+    on_delete_queue,
+    sender=SubjectScheduleItemQueue,
+    dispatch_uid='on_delete_queue'
+)

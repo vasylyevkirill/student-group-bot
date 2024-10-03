@@ -17,7 +17,7 @@ from main.filters import (
     IsScheduleItemMarkEditingTitle,
     IsScheduleItemMarkEditingText,
 )
-from main.services.bot_user import get_user, get_student_group, create_user
+from main.services.bot_user import get_user, get_student_group, create_user, ais_user_editor
 from main.keyboards import (
     get_default_user_keyboard,
     get_editor_keyboard, get_admin_keyboard,
@@ -32,6 +32,7 @@ from main.services.group_actions import (
     aget_group_subject_by_index,
     aget_week_separated_schedule,
     get_subject_closest_schedule,
+    aget_queue_schedule,
 )
 from main.helpers import time_to_str, date_to_str
 
@@ -184,7 +185,7 @@ async def number_handler(message: Message) -> None:
     schedule_items_ids = [i.id async for i in schedule]
 
     commands_dict = {
-        dt: f'homework:schedule_item_id={schedule_items_ids[i]}'
+        dt: f'create_homework:schedule_item_id={schedule_items_ids[i]}'
         for i, dt in enumerate(schedule_items_list)
     }
 
@@ -203,8 +204,8 @@ async def broadcast_schedule_item_mark(group: StudentGroup, mark: SubjectSchedul
         await bot.send_message(chat_id=student.telegram_id, text='Добавлено новое задание:\n\n' + str(mark))
 
 
-@router.callback_query(lambda c: 'homework:' in c.data)
-async def add_mark_callback_handler(callback: CallbackQuery):
+@router.callback_query(lambda c: 'create_homework:' in c.data)
+async def add_mark_callback_handler(callback: CallbackQuery) -> None:
     # homework:schedule_item_id=2
     schedule_item_id = int(callback.data.split('=')[1])
     schedule_item = SubjectScheduleItem.objects.filter(id=schedule_item_id)
@@ -259,7 +260,7 @@ async def date_handler(message: Message) -> None:
     schedule_items_ids = [i.id async for i in schedule]
 
     commands_dict = {
-        dt: f'queue:schedule_item_id={schedule_items_ids[i]}'
+        dt: f'create_queue:schedule_item_id={schedule_items_ids[i]}'
         for i, dt in enumerate(schedule_items_list)
     }
 
@@ -269,52 +270,136 @@ async def date_handler(message: Message) -> None:
     )
 
 
-async def show_subject_item_queue(message: Message, schedule_item: SubjectScheduleItem):
+async def get_subject_item_queue_text(schedule_item: SubjectScheduleItem) -> str:
     queue = SubjectScheduleItemQueue.objects.select_related('student').filter(subject_item=schedule_item)
 
     queue_list = [
-        f'{i + 1}. {r}' async for i, r in asyncstdlib.enumerate(queue)
+        f'{r}' async for r in queue
     ]
 
-    return await message.answer(
+    return (
         f'{schedule_item.subject.name} '
         f'{date_to_str(schedule_item.start_at)} '
-        f'{time_to_str(schedule_item.start_at)}\n\n' + ' '.join(queue_list)
+        f'{time_to_str(schedule_item.start_at)}\n\n' + '\n'.join(queue_list)
     )
 
 
-@router.callback_query(lambda c: 'queue:' in c.data)
-async def add_queue_callback_handler(callback: CallbackQuery):
+@router.callback_query(lambda c: 'create_queue:' in c.data)
+async def create_queue_callback_handler(callback: CallbackQuery) -> None:
     # queue:schedule_item_id=2
+    from main.bot import bot
+
     schedule_item_id = int(callback.data.split('=')[1])
-    schedule_item = SubjectScheduleItem.objects.select_related('subject').filter(id=schedule_item_id)
-    schedule_item = await schedule_item.afirst()
+    schedule_item_query = SubjectScheduleItem.objects.select_related('subject').filter(id=schedule_item_id)
+    schedule_item = await schedule_item_query.afirst()
     user = await get_user(callback.from_user)
 
-    existing_queue_count = sync_to_async(
-        SubjectScheduleItemQueue.objects.filter(student=user, subject_item=schedule_item).count
-    )
+    if not user or user.group_id != schedule_item.subject.group_id:
+        return
 
-    if await existing_queue_count():
-        await callback.message.answer('Эта очередь уже существует очередь.')
-        await show_subject_item_queue(callback.message, schedule_item)
+    query_set = SubjectScheduleItemQueue.objects.filter(subject_item=schedule_item)
+
+    is_user_in_queue = sync_to_async(query_set.filter(student=user).count)
+
+    if await is_user_in_queue():
+        await bot.send_message(
+            chat_id=user.telegram_id,
+            text='Вы уже записаны в эту очередь:\n\n' + await get_subject_item_queue_text(schedule_item),
+            reply_markup=get_inline_keyboard_from_dict({'Удалить себя из очереди' : f'delete_queue:schedule_item_id={schedule_item_id}'}),
+        )
     else:
-        await SubjectScheduleItemQueue.objects.acreate(
+        is_schedule_exist = bool(await sync_to_async(query_set.count)())
+        if not is_schedule_exist and not await ais_user_editor(user):
+            return await bot.send_message(
+                chat_id=user.telegram_id,
+                text='Этой очереди больше нет, a для того чтобы создать новую вам нужно быть редактором.\n\nВы можете попросить старосту повысить вас.',
+            )
+
+        queue_record = await SubjectScheduleItemQueue.objects.acreate(
             student=user,
             subject_item=schedule_item,
         )
-        await callback.message.answer('Очередь успешно добавлена!')
 
-    return await reply_default_user_message(callback.message, user)
+        if queue_record.order == 0:
+            
+            group = await get_student_group(user=callback.from_user)
+            broadcast_list = group.students.all()
+            async for student in broadcast_list:
+                if student.id == user.id:
+                    continue
+                await bot.send_message(
+                    chat_id=student.telegram_id,
+                    text='Добавлена новая очередь:\n\n' + await get_subject_item_queue_text(schedule_item),
+                    reply_markup=get_inline_keyboard_from_dict({'Записаться в очередь': callback.data}),
+                )
+
+        await bot.send_message(
+            chat_id=user.telegram_id,
+            text=f'Вы успешно записались в очередь:\n\nawait get_subject_item_queue_text(schedule_item)',
+            reply_markup=get_inline_keyboard_from_dict({'Удалить себя из очереди' : f'delete_queue:schedule_item_id={schedule_item_id}'}),
+        )
+
+@router.callback_query(lambda c: 'delete_queue:' in c.data)
+async def delete_queue_callback_handler(callback: CallbackQuery) -> None:
+    from main.bot import bot
+
+    schedule_item_id = int(callback.data.split('=')[1])
+    schedule_item_query = SubjectScheduleItem.objects.select_related('subject').filter(id=schedule_item_id)
+    schedule_item = await schedule_item_query.afirst()
+    user = await get_user(callback.from_user)
+
+    if not user or user.group_id != schedule_item.subject.group_id:
+        return
+
+    is_user_in_queue = sync_to_async(
+        SubjectScheduleItemQueue.objects.filter(student=user, subject_item=schedule_item).count
+    )
+
+    if await is_user_in_queue():
+        queue_record = await SubjectScheduleItemQueue.objects.aget(
+            student=user,
+            subject_item=schedule_item,
+        )
+        await queue_record.adelete()
+        await bot.send_message(
+            chat_id=user.telegram_id,
+            text='Вы теперь не в очереди:\n\n' + await get_subject_item_queue_text(schedule_item),
+            reply_markup=get_inline_keyboard_from_dict({'Записаться снова': f'create_queue:schedule_item_id={schedule_item_id}'})
+        )
+    else:
+        await bot.send_message(
+            chat_id=user.telegram_id,
+            text='Вас нет в этой очереди:\n\n' + await get_subject_item_queue_text(schedule_item)
+        )
+
+
+@router.callback_query(lambda c: 'create_homework:' in c.data)
+async def create_mark_callback_handler(callback: CallbackQuery) -> None:
+    # homework:schedule_item_id=2
+    schedule_item_id = int(callback.data.split('=')[1])
+    schedule_item = SubjectScheduleItem.objects.filter(id=schedule_item_id)
+    schedule_item = await schedule_item.afirst()
+    user = await get_user(callback.from_user)
+
+    await SubjectScheduleItemMark.objects.acreate(
+        subject_item=schedule_item,
+        creator=user,
+    )
+
+    return await callback.message.answer('Теперь напишите заголовок(например дз):', reply_markup=ReplyKeyboardRemove())
 
 
 @router.message(F.text == 'Создать очередь', IsEditorFilter())
 async def add_queue_handler(message: Message) -> None:
-    return await message.answer('Напишите дату в формате 29.09.2024:')
+    return await message.answer(f'Напишите дату в формате {date_to_str(datetime.now(), mask="%d.%m.%Y")}:')
 
 
 async def aget_marks_date_text(marks_schedule: dict[SubjectScheduleItem, list[SubjectScheduleItemMark]]) -> str:
-    return '\n'.join([f'{i}:\n{"\n".join([str(m) async for m in i.marks.all()])}' for i in marks_schedule.keys()])
+    return '\n'.join([f'{i}:\n{"\n".join([str(m) for m in marks_schedule[i]])}' for i in marks_schedule.keys()])
+
+
+async def aget_queue_date_text(queue_schedule: dict[SubjectScheduleItem, list[SubjectScheduleItemQueue]]) -> str:
+    return '\n'.join([f'{i}:\n{"\n".join([str(q) for q in queue_schedule[i]])}' for i in queue_schedule.keys()])
 
 
 @router.message(F.text == 'ДЗ на сегодня', IsRegisteredFilter())
@@ -334,7 +419,7 @@ async def get_today_mark_schedule(message: Message) -> None:
 async def get_week_mark_schedule(message: Message) -> None:
     group = await get_student_group(user=message.from_user)
 
-    response_text: str = f'Задачи на неделю для {group.name}:\n\n'
+    response_text: str = ''
 
     schedule = await aget_week_separated_schedule(group)
     for day in schedule:
@@ -346,7 +431,45 @@ async def get_week_mark_schedule(message: Message) -> None:
 
         response_text += f'{day}:\n{await aget_marks_date_text(marks_day_schedule)}\n\n'
 
-    return await message.answer(response_text)
+    if not response_text:
+        response_text = 'На эту неделю заданий нет.'
+
+    return await message.answer(f'Задачи на неделю для {group.name}:\n\n' + response_text)
+
+
+@router.message(F.text == 'Очереди на сегодня', IsRegisteredFilter())
+async def get_today_queue_schedule(message: Message) -> None:
+    group = await get_student_group(user=message.from_user)
+
+    queue_schedule = await aget_queue_schedule(group)
+    queue_schedule_text: str = await aget_queue_date_text(queue_schedule)
+
+    if not len(queue_schedule_text):
+        queue_schedule_text = 'На сегодня очередей нет, отдыхаем)'
+
+    await message.answer('Список очередей на сегодня:\n\n' + queue_schedule_text)
+
+
+@router.message(F.text == 'Очереди на неделю', IsRegisteredFilter())
+async def get_week_queue_schedule(message: Message) -> None:
+    group = await get_student_group(user=message.from_user)
+
+    response_text: str = ''
+
+    schedule = await aget_week_separated_schedule(group)
+    for day in schedule:
+        if not schedule[day]:
+            continue
+        queue_day_schedule = await aget_queue_schedule(date_schedule=schedule[day])
+        if not len(queue_day_schedule.keys()):
+            continue
+
+        response_text += f'{day}:\n{await aget_queue_date_text(queue_day_schedule)}\n\n'
+
+    if not response_text:
+        response_text = 'На эту неделю очередей нет.'
+
+    return await message.answer(f'Список очередей на неделю для {group.name}:\n\n' + response_text)
 
 
 @router.message()

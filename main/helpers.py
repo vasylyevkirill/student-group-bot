@@ -9,8 +9,8 @@ def time_to_str(date: datetime) -> str:
     return date.strftime('%H:%M')
 
 
-def date_to_str(date: datetime) -> str:
-    return date.strftime('%d.%m.%y')
+def date_to_str(date: datetime, mask='%d.%m.%y') -> str:
+    return date.strftime(mask)
 
 
 def get_text_week_day_number(week: str) -> int:

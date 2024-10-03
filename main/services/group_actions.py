@@ -11,14 +11,16 @@ from main.helpers import get_day_start_end, get_week_start_end
 WEEK_DAYS_LIST = 'Понедельник Вторник Среда Четверг Пятница Суббота Воскресенье'.split()
 
 
-def get_group_subjects_list(group: StudentGroup) -> tuple[QuerySet, int]:
+def get_group_subjects_list(group: StudentGroup) -> tuple[QuerySet[Subject], int]:
     subjects = Subject.objects.filter(group=group)
     count = subjects.count()
     return Subject.objects.filter(group=group), count
 
 
 def get_group_subject_by_index(index: int, group: StudentGroup) -> Subject | None:
-    queryset, _ = get_group_subjects_list(group)
+    queryset, count = list(get_group_subjects_list(group))
+    if index > count:
+        return None
     subject = next(itertools.islice(queryset, index - 1, None))
     if not isinstance(subject, Subject):
         return None
@@ -81,12 +83,21 @@ def get_marks_schedule(
 
 
 def get_queue_schedule(
-    group: StudentGroup, date: datetime | None = None
+    group: StudentGroup | None = None, date: datetime | None = None, date_schedule: Iterable | None = None
 ) -> dict[SubjectScheduleItem, list[SubjectScheduleItemQueue]] | None:
-    pass
+    if not date_schedule and not date and not group:
+        raise ValueError(__name__ + ': requires at least one arguments.')
+
+    if not date_schedule:
+        date_schedule = tuple(get_day_schedule(group, date))
+
+    queue_schedule = {key: list(key.queue.select_related('student').all()) for key in date_schedule if key.queue.count()}
+
+    return queue_schedule
 
 
 aget_marks_schedule = sync_to_async(get_marks_schedule)
+aget_queue_schedule = sync_to_async(get_queue_schedule)
 aget_group_subjects_list = sync_to_async(get_group_subjects_list)
 aget_group_subject_by_index = sync_to_async(get_group_subject_by_index)
 aget_week_separated_schedule = sync_to_async(get_week_separated_schedule)

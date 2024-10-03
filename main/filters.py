@@ -5,7 +5,7 @@ from aiogram.filters import Filter
 from aiogram.types import Message
 
 from main.models import BotUser, SubjectScheduleItemMark
-from main.services.bot_user import get_user
+from main.services.bot_user import get_user, ais_user_editor
 
 
 class _RegexFilter(Filter):
@@ -42,8 +42,7 @@ class IsEditorFilter(IsRegisteredFilter):  # admin is also editor
     async def __call__(self, message: Message) -> bool:
         if not await super().__call__(message):
             return False
-        self.user.role
-        return self.user.role == BotUser.BotUserRoles.EDITOR or await self.user.ais_admin
+        return await ais_user_editor(self.user)
 
 
 class IsAdminFilter(IsRegisteredFilter):

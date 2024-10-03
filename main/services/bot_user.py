@@ -17,6 +17,10 @@ async def is_user_registered(user: User | None = None, user_query: QuerySet | No
     return bool(await get_user_count())
 
 
+def is_user_editor(user: BotUser) -> bool:
+    return user.role == BotUser.BotUserRoles.EDITOR or user.is_admin
+
+
 async def get_user(user: User | None = None, user_id: int | None = None) -> BotUser | None:
     queryset = BotUser.objects.select_related('group')
     if user:
@@ -29,6 +33,8 @@ async def get_user(user: User | None = None, user_id: int | None = None) -> BotU
     if not user_registered:
         return None
     return await queryset.afirst()
+
+
 
 
 async def create_user(user: User, group: StudentGroup) -> BotUser:
@@ -69,3 +75,6 @@ async def get_student_group(name: str | None = None, user: User | None = None) -
         return await _get_student_group_by_user(user, queryset)
 
     raise ValueError(__name__ + ': requires at least one argument but 0 given.')
+
+
+ais_user_editor = sync_to_async(is_user_editor)
