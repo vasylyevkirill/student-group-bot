@@ -109,24 +109,14 @@ async def under_construction_handler(message: Message) -> None:
 @router.message(F.text == 'Моя группа', IsRegisteredFilter())
 async def my_group_handler(message: Message) -> None:
     group = await get_student_group(user=message.from_user)
-    if group is None:
-        return await message.answer('Вы пока не прикреплены ни к какой группе.\n\nНапиши группу в которой ты учишься: ')
-
-    admin = await get_user(user_id=group.admin_id)
-    admin_text = 'к сожалению, мы ещё не успели определить старосту вашей группы.'
-    if admin:
-        admin_text = str(admin)
-    await message.answer(f'Ваша группа: {group.name}\n\nВаш староста: ' + admin_text)
-
-
-@router.message(F.text == 'Список группы', IsRegisteredFilter())
-async def my_group_list_handler(message: Message) -> None:
-    group = await get_student_group(user=message.from_user)
     if not group:
         return await no_group_handler(message)
+    admin = await get_user(user_id=group.admin_id)
+    admin_text = 'к сожалению, мы ещё не успели определить старосту вашей группы.'
     students_list = [str(s) async for s in group.students.all()]
-
-    await message.answer(f'Список группы {group.name}:\n\n' + '\n'.join(students_list))
+    if admin:
+        admin_text = str(admin)
+    await message.answer(f'Список группы {group.name}:\n\n' + '\n'.join(students_list) + '\n\nВаш староста: ' + admin_text)
 
 
 @router.message(F.text == 'Расписание на сегодня', IsRegisteredFilter())
@@ -199,9 +189,10 @@ async def broadcast_schedule_item_mark(group: StudentGroup, mark: SubjectSchedul
     from main.bot import bot
 
     broadcast_list = group.students.all()
+    mark.subject_item
 
     async for student in broadcast_list:
-        await bot.send_message(chat_id=student.telegram_id, text='Добавлено новое задание:\n\n' + str(mark))
+        await bot.send_message(chat_id=student.telegram_id, text='Добавлено новое задание:\n\n' + str(mark.subject_item) + '\n\n' + str(mark))
 
 
 @router.callback_query(lambda c: 'create_homework:' in c.data)
@@ -240,7 +231,7 @@ async def edit_schedule_item_mark_title(message: Message) -> None:
 async def edit_schedule_item_mark_text(message: Message) -> None:
     user = await get_user(message.from_user)
     group = await get_student_group(user=message.from_user)
-    editing_mark = await SubjectScheduleItemMark.objects.filter(creator=user, text='').afirst()
+    editing_mark = await SubjectScheduleItemMark.objects.select_related('subject_item', 'subject_item__subject').filter(creator=user, text='').afirst()
 
     editing_mark.text = message.text
     await editing_mark.asave(force_update=True)
@@ -335,7 +326,7 @@ async def create_queue_callback_handler(callback: CallbackQuery) -> None:
 
         await bot.send_message(
             chat_id=user.telegram_id,
-            text=f'Вы успешно записались в очередь:\n\nawait get_subject_item_queue_text(schedule_item)',
+            text=f'Вы успешно записались в очередь:\n\n' + await get_subject_item_queue_text(schedule_item),
             reply_markup=get_inline_keyboard_from_dict({'Удалить себя из очереди' : f'delete_queue:schedule_item_id={schedule_item_id}'}),
         )
 

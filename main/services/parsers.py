@@ -1,7 +1,8 @@
 import json
 import requests
 
-from main.services.group_management import WEEK_DAYS_LIST, create_subject
+from main.services.group_management import create_subject
+from main.helpers import WEEK_DAYS_LIST
 from main.models import StudentGroup
 
 

@@ -31,7 +31,7 @@ def get_keyboard_from_range(number_list: Iterable[int]) -> ReplyKeyboardMarkup:
 
 
 def get_default_user_keyboard() -> ReplyKeyboardMarkup:
-    commands_list = 'Моя группа#Список группы#Расписание#Расписание на сегодня#ДЗ на неделю#Очереди на сегодня#Очереди на неделю'.split('#')
+    commands_list = 'Моя группа#Расписание#Расписание на сегодня#ДЗ на неделю#Очереди на сегодня#Очереди на неделю'.split('#')
 
     return _get_markup(commands_list)
 

@@ -5,6 +5,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-+swhl(ar$w(2^)z8c9&f2!fb9hus&4&qa1=2lejm5haz!x5w*p'
+DEBUG = bool(int(os.getenv('DEBUG', True)))
 
 DATABASES = {
     'default': {
@@ -28,4 +29,7 @@ USE_TZ = False
 
 INSTALLED_APPS = ("main",)
 
-BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_DEV_TOKEN', '')
+if not DEBUG:
+    BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
